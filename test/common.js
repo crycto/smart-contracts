@@ -17,13 +17,19 @@ module.exports = {
   should,
   oz,
   BN,
+  eqBN: (val1, val2) => expect(val1).to.eq.BN(val2),
   toWei: (amount) => new BN(web3.utils.toWei(amount + "")),
   isAddress: (address) => {
     should.exist(address);
-    assert.notEqual(address, 0x0);
-    assert.notEqual(address, "");
+    assert.notEqual(address, oz.ZERO_ADDRESS);
+    assert.notEqual(address, oz.ZERO_BYTES32);
   },
-  getBalance: (address) => web3.eth.getBalance(address),
+  gasCost: ({ gasUsed }) => new BN(gasUsed * 20000000000),
+  logBalance: async (address, message = "") =>
+    console.log(
+      `${message} ====> `,
+      (await oz.balance.current(address)).toString() / 1e18
+    ),
   MatchStages: {
     CREATED: new BN(1),
     COMPLETED: new BN(2),

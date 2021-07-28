@@ -55,7 +55,7 @@ contract TournamentV1 is CouncilV1{
     event MatchCreated(uint256 indexed matchId, address indexed umpire, string uri, uint32 minScore,uint32 scoreMultiple,uint256 deadline);
     event DeadlineUpdated(uint256 indexed matchId, address indexed umpire, uint256 deadline);
     event MatchForfeited(uint256 indexed matchId, address indexed umpire);
-    event MatchCompleted(uint256 indexed matchId, address indexed scorer, uint32 winningScore, uint256 rewardAmount, uint256 treasuryAmount);
+    event MatchCompleted(uint256 indexed matchId, address indexed umpire, uint32 winningScore, uint256 rewardAmount, uint256 treasuryAmount);
     event BetScore(uint256 indexed matchId, address indexed sender, uint32 score, uint256 amount);
     event Claim(uint256 indexed matchId, address indexed sender, uint256 amount);
     event Refund(uint256 indexed matchId, address indexed sender, uint256 amount);
@@ -107,7 +107,7 @@ contract TournamentV1 is CouncilV1{
         require(block.timestamp > m.deadline, "Council : DEADLINE_NOT_PASSED");
         m.winningScore = _winningScore;
         m.stage = MatchStage.COMPLETED;
-        uint256 treasuryAmt;
+        uint256 treasuryAmt=0;
         if(isHouseWin(_matchId)){
             treasuryAmt = m.totalAmount;
         }else{
@@ -154,7 +154,14 @@ contract TournamentV1 is CouncilV1{
     function claimable(uint256 _matchId,address _user) public view returns(bool) {
         Match storage m = matches[_matchId];
         Bet storage b = ledger[_matchId][_user];
-        return b.score == m.winningScore;
+        return b.amount>0 && b.score == m.winningScore;
+    }
+
+    function getRewardMultiplier(uint256 _matchId,uint32 _score) public view validMatchId(_matchId) returns(uint256) {
+        Match storage m = matches[_matchId];
+        uint256 rewards = m.totalAmount.sub(m.betsAtScores[_score]);
+        uint256 rewardAmount = rewards.mul(m.rewardRate).div(TOTAL_RATE);
+        return rewardAmount.mul(10000).div(m.betsAtScores[_score]);
     }
     
     /**
@@ -167,7 +174,8 @@ contract TournamentV1 is CouncilV1{
 
     function refund(uint256 _matchId) external notContract validMatchId(_matchId) atStage(_matchId,MatchStage.FORFEITED){  
         Bet storage b = ledger[_matchId][_msgSender()];
-        require(!b.claimed, "Council : TOKENS_REFUNDED");
+        require(b.amount>0, "Council : DID_NOT_PARTICIPATE");
+        require(!b.claimed, "Council : ALREADY_REFUNDED");
         b.claimed=true;
         payable(_msgSender()).transfer(b.amount);
         emit Refund(_matchId, _msgSender(), b.amount);

@@ -1,6 +1,5 @@
-const { expect, BN, isAddress } = require("./helper");
+const { expect, BN, isAddress } = require("./common");
 const TournamentV1 = artifacts.require("TournamentV1");
-const { match1, match2, match3 } = require("./matches");
 
 contract("TournamentV1", ([president, umpire, ...players]) => {
   let tournament;
@@ -23,7 +22,8 @@ contract("TournamentV1", ([president, umpire, ...players]) => {
   context("test : access control", () => {
     it("should grant umpire role", async () => {
       const umpireRole = await tournament.UMPIRE_ROLE();
-      await tournament.grantRole(umpireRole, umpire).should.be.fulfilled;
+      await tournament.grantRole(umpireRole, umpire, { from: president }).should
+        .be.fulfilled;
       tournament.hasRole(umpireRole, umpire).should.eventually.be.true;
     });
   });
@@ -87,68 +87,4 @@ contract("TournamentV1", ([president, umpire, ...players]) => {
       ).should.be.rejected;
     });
   });
-
-  context("test-group : matches", () => {
-    // before(async () => {
-    //   tournament = await TournamentV1.new(president);
-    //   console.log(tournament.address, "Tournament");
-    // });
-
-    context(
-      "test : match 1 - completed - winning range is 310-320 - player1 & player2 win",
-      () => {
-        match1(tournament, [president, umpire, ...players]);
-      }
-    );
-    // context(
-    //   "test : match 2 - completed - winning range is 350-360 - nobody wins - refund",
-    //   () => match2(tournament, [president, umpire, ...players])
-    // );
-    // context("test : match 3 - forfeited - refund", () =>
-    //   match3(tournament, [president, umpire, ...players])
-    // );
-
-    context("test : treasury claim", () => {
-      it("should revert if anybody other than president tries to claim", () => {
-        tournament.claimTreasury({ from: players[0] }).should.be.rejected;
-      });
-    });
-  });
-
-  // it("should revert if ...", () => {
-  //   return TournamentV1.deployed()
-  //     .then((instance) => {
-  //       return instance.publicOrExternalContractMethod(argument1, argument2, {
-  //         from: externalAddress,
-  //       });
-  //     })
-  //     .then((result) => {
-  //       assert.fail();
-  //     })
-  //     .catch((error) => {
-  //       assert.notEqual(error.message, "assert.fail()", "Reason ...");
-  //     });
-  // });
-
-  // context("testgroup - security tests - description...", () => {
-  //   //deploy a new contract
-  //   before(async () => {
-  //     /* before tests */
-  //     const newTournamentV1 = await TournamentV1.new();
-  //   });
-
-  //   beforeEach(async () => {
-  //     /* before each tests */
-  //   });
-
-  //   it("fails on initialize ...", async () => {
-  //     return assertRevert(async () => {
-  //       await newTournamentV1.initialize();
-  //     });
-  //   });
-
-  //   it("checks if method returns true", async () => {
-  //     assert.isTrue(await newTournamentV1.thisMethodShouldReturnTrue());
-  //   });
-  // });
 });
