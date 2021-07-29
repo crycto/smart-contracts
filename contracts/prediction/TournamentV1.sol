@@ -48,11 +48,11 @@ contract TournamentV1 is CouncilV1{
 
     uint8 public constant TOTAL_RATE = 100; 
     uint8 public rewardRate = 90; 
-    uint128 public constant MIN_BET_AMOUNT = 0.01 ether;
+    uint256 public minBetAmount = 0.01 ether;
 
     uint256 public treasuryAmount;
 
-    event MatchCreated(uint256 indexed matchId, address indexed umpire, string uri, uint32 minScore,uint32 scoreMultiple,uint256 deadline);
+    event MatchCreated(uint256 indexed matchId, address indexed umpire, string uri, uint32 minScore, uint32 scoreMultiple, uint8 rewardRate, uint256 deadline);
     event DeadlineUpdated(uint256 indexed matchId, address indexed umpire, uint256 deadline);
     event MatchForfeited(uint256 indexed matchId, address indexed umpire);
     event MatchCompleted(uint256 indexed matchId, address indexed umpire, uint32 winningScore, uint256 rewardAmount, uint256 treasuryAmount);
@@ -60,7 +60,8 @@ contract TournamentV1 is CouncilV1{
     event Claim(uint256 indexed matchId, address indexed sender, uint256 amount);
     event Refund(uint256 indexed matchId, address indexed sender, uint256 amount);
     event ClaimTreasury(uint256 amount);
-    event RewardRateUpdated(uint256 indexed matchId, uint256 rewardRate);
+    event RewardRateUpdated(uint256 indexed matchId, uint8 rewardRate);
+    event MinimumBetAmountUpdated(uint256 minBetAmount);
 
     constructor(address _president) 
     CouncilV1(_president)
@@ -82,7 +83,7 @@ contract TournamentV1 is CouncilV1{
         m.deadline = block.timestamp+_deadline;
         m.stage = MatchStage.CREATED;
         m.rewardRate = rewardRate;
-        emit MatchCreated(matchId, _msgSender(), m.uri, m.minScore, m.scoreMultiple, m.deadline);
+        emit MatchCreated(matchId, _msgSender(), m.uri, m.minScore, m.scoreMultiple, m.rewardRate, m.deadline);
         return matchId;
     }
 
@@ -100,7 +101,7 @@ contract TournamentV1 is CouncilV1{
     }
 
     function endMatch(uint256 _matchId,uint32 _winningScore) 
-    external onlyUmpire atStage(_matchId,MatchStage.CREATED) 
+    external onlyScorer atStage(_matchId,MatchStage.CREATED) 
     {
         require(_winningScore>0,"Council : INVALID_SCORE");
         Match storage m = matches[_matchId];
@@ -212,6 +213,12 @@ contract TournamentV1 is CouncilV1{
         emit RewardRateUpdated(matchCounter.current().add(1), rewardRate);
     }
 
+    function setMinBetAmount(uint256 _minBetAmount) external onlyPresident {
+        require(_minBetAmount>0, "Council : INVALID_MINBETAMOUNT");
+        minBetAmount = _minBetAmount;
+        emit MinimumBetAmountUpdated(minBetAmount);
+    }
+
     function claimTreasury(uint256 _amount) external onlyPresident {
         require(treasuryAmount>=_amount,"Council : INSUFFICIENT_TREASURY_AMOUNT");
         treasuryAmount = treasuryAmount.sub(_amount);
@@ -233,7 +240,7 @@ contract TournamentV1 is CouncilV1{
     }
 
     modifier validBet(uint256 _matchId,uint256 _score){
-        require(msg.value > MIN_BET_AMOUNT, "Council : BET_AMOUNT_TOO_LOW");
+        require(msg.value >= minBetAmount, "Council : BET_AMOUNT_TOO_LOW");
         Match storage m = matches[_matchId];
         Bet storage b = ledger[_matchId][_msgSender()];
         require(m.deadline > block.timestamp, "Council : DEADLINE_PASSED");

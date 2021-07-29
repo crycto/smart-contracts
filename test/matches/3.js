@@ -54,6 +54,10 @@ module.exports = ([president, umpire, ...players]) => {
         matchId: MATCH_ID,
         umpire,
       });
+      await logBalance(
+        tournament.address,
+        "contract.balance after forfeiting match"
+      );
     } catch (e) {
       console.log(e);
       assert.isOk(false, "umpire unable to end match");
@@ -99,6 +103,6 @@ module.exports = ([president, umpire, ...players]) => {
   });
 
   after(async () => {
-    await logBalance(tournament.address, "contract.balance @ end of match1");
+    await logBalance(tournament.address, "contract.balance @ end of match3");
   });
 };

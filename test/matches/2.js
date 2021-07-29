@@ -95,6 +95,6 @@ module.exports = ([president, umpire, ...players]) => {
     }).should.be.rejected);
 
   after(async () => {
-    await logBalance(tournament.address, "contract.balance @ end of match1");
+    await logBalance(tournament.address, "contract.balance @ end of match2");
   });
 };

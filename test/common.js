@@ -27,7 +27,7 @@ module.exports = {
   gasCost: ({ gasUsed }) => new BN(gasUsed * 20000000000),
   logBalance: async (address, message = "") =>
     console.log(
-      `${message} ====> `,
+      `     ${message} => `,
       (await oz.balance.current(address)).toString() / 1e18
     ),
   MatchStages: {

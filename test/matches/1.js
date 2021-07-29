@@ -44,7 +44,7 @@ const CLAIMED = [
   ), //Player2
 ];
 
-module.exports = ([president, umpire, ...players]) => {
+module.exports = ([president, umpire, scrorer, ...players]) => {
   const [player1, player2, player3, player4, player5] = players;
   let tournament;
   before(async () => {
@@ -71,6 +71,7 @@ module.exports = ([president, umpire, ...players]) => {
       uri: URI,
       minScore: MIN_SCORE,
       scoreMultiple: SCORE_MULTIPLE,
+      rewardRate: REWARD_RATE,
       deadline: new BN(blockTimeStamp).add(DEADLINE),
     });
 
@@ -117,10 +118,10 @@ module.exports = ([president, umpire, ...players]) => {
     });
   });
 
-  it("should revert if player bets with 0 ether", () =>
+  it("should revert if player bets less than mininum bet amount", async () =>
     tournament.betScore(MATCH_ID, BETS[1], {
       from: player2,
-      value: toWei(0),
+      value: (await tournament.minBetAmount()).sub(new BN(1)),
     }).should.be.rejected);
 
   it("non-umpire & non-presidet should not be able to pause the tournament", () =>
@@ -213,17 +214,21 @@ module.exports = ([president, umpire, ...players]) => {
     await tracker.get();
     const promise = tournament.claim(MATCH_ID, { from: player1 });
     promise.should.be.fulfilled;
-    const tx = await promise;
-    const gasUsed = new BN(tx.receipt.gasUsed * 20000000000);
-    expect(await tracker.delta()).to.eq.BN(CLAIMED[0].sub(gasUsed));
-    oz.expectEvent(tx, "Claim", {
-      matchId: MATCH_ID,
-      sender: player1,
-      amount: CLAIMED[0],
-    });
+    try {
+      const tx = await promise;
+      const gasUsed = new BN(tx.receipt.gasUsed * 20000000000);
+      expect(await tracker.delta()).to.eq.BN(CLAIMED[0].sub(gasUsed));
+      oz.expectEvent(tx, "Claim", {
+        matchId: MATCH_ID,
+        sender: player1,
+        amount: CLAIMED[0],
+      });
 
-    console.log("Bet placed by player1 = ", BET_AMOUNTS[0].toString() / 1e18);
-    console.log("Claimed by player1 =  ", CLAIMED[0].toString() / 1e18);
+      console.log("Bet placed by player1 = ", BET_AMOUNTS[0].toString() / 1e18);
+      console.log("Claimed by player1 =  ", CLAIMED[0].toString() / 1e18);
+    } catch (e) {
+      assert.fail("unable to claim");
+    }
   });
 
   it("player1 should not be able to claim again", () =>
